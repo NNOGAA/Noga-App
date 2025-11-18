@@ -17,29 +17,30 @@ export const fetchNutritionData = async (): Promise<NutritionDataResult | null> 
     const summaries: Summary[] = [];
     const ingredients: Ingredient[] = [];
 
-    // Parse nutrition info
     if (nutritionInfoStr) {
       const nutritionData = JSON.parse(nutritionInfoStr);
       if (Array.isArray(nutritionData)) {
         nutritionData.forEach((item: any) => {
+          const rawValue = item.nilai || item.value;
+          const classification = item.status === 'good' ? 'green' : item.status === 'bad' ? 'red' : 'yellow';
+
           nutritionFacts.push({
             name: item.nama || item.name || '',
-            value: typeof item.nilai === 'number' ? item.nilai : parseFloat(item.nilai) || 0,
+            value: typeof rawValue === 'number' ? rawValue : parseFloat(rawValue) || 0,
             unit: item.type || item.unit || '',
-            classification: item.status === 'good' ? 'green' : item.status === 'bad' ? 'red' : 'yellow',
+            classification,
           });
         });
       }
     }
 
-    // Parse ingredients
     if (ingredientsStr) {
       const ingredientsData = JSON.parse(ingredientsStr);
       if (Array.isArray(ingredientsData)) {
         ingredientsData.forEach((item: any) => {
           const classification = item.status === 'good' ? 'green' : item.status === 'bad' ? 'red' : 'yellow';
           ingredients.push({
-            name: item.name || '',
+            name: item.name || item.nama || '',
             detail: item.detail || '',
             classification: classification as 'green' | 'yellow' | 'red',
           });
@@ -47,25 +48,30 @@ export const fetchNutritionData = async (): Promise<NutritionDataResult | null> 
       }
     }
 
-    // Parse summary
     if (summaryStr) {
-      const summaryData = JSON.parse(summaryStr);
-      if (Array.isArray(summaryData)) {
-        summaryData.forEach((item: any) => {
-          const key = Object.keys(item)[0];
-          if (key && item[key]) {
-            const statusMap: { [key: string]: 'good' | 'normal' | 'bad' } = {
-              'good': 'good',
-              'normal': 'normal',
-              'bad': 'bad',
-              'neutral': 'normal',
-            };
-            summaries.push({
-              message: key,
-              detail: item[key].description || '',
-              classification: statusMap[item[key].status] || 'normal',
-            });
-          }
+      const generalData = JSON.parse(summaryStr);
+      if (generalData.summary && Array.isArray(generalData.summary)) {
+        generalData.summary.forEach((item: any) => {
+          Object.keys(item).forEach((key) => {
+            if (key && item[key]) {
+              const statusMap: { [key: string]: 'good' | 'normal' | 'bad' } = {
+                'good': 'good',
+                'normal': 'normal',
+                'bad': 'bad',
+                'neutral': 'normal',
+                'yes': 'good',
+                'no': 'normal',
+                'low sugar': 'good',
+                'normal sodium': 'good',
+              };
+              const status = (item[key].status || '').toLowerCase();
+              summaries.push({
+                message: key,
+                detail: item[key].description || '',
+                classification: statusMap[status] || 'normal',
+              });
+            }
+          });
         });
       }
     }

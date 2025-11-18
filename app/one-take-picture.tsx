@@ -155,7 +155,7 @@ export default function TakePicture() {
                   activeRequestRef.current = source;
 
                   const response = await axios.post(
-                    "https://back-end-service-693437063823.asia-southeast2.run.app/image/prepared-food",
+                    `${process.env.EXPO_PUBLIC_API_URL}/image/prepared-food`,
                     formData,
                     {
                       headers: {

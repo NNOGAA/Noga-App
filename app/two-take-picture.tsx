@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Alert, Image, ActivityIndicator, AppState, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  Image,
+  ActivityIndicator,
+  AppState,
+  StyleSheet,
+} from "react-native";
 
 // CAMERA
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -11,11 +20,10 @@ import FeatherIcon from "react-native-vector-icons/Feather";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useRouter, useFocusEffect } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 
-// API URL CONSTANT
-const API_BASE_URL = 'https://main-be-933012768577.asia-southeast2.run.app/api';
+const API_BASE_URL = `${process.env.EXPO_PUBLIC_API_URL}api`;
 
 export default function TwoTakePicture() {
   const router = useRouter();
@@ -25,21 +33,26 @@ export default function TwoTakePicture() {
   const [lastPhotoUri, setLastPhotoUri] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(false);
-  
+
   const isProcessingRef = useRef(false);
   const appStateRef = useRef(AppState.currentState);
   const hasNavigatedRef = useRef(false);
   const previousPhotosRef = useRef<string[]>([]);
   const activeRequestRef = useRef<any>(null);
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
   const cameraRef = useRef<CameraView>(null);
-  
+
   const isFocused = useIsFocused();
 
   // App state change handling
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === "active"
+      ) {
         resetAllState();
       }
       appStateRef.current = nextAppState;
@@ -66,9 +79,12 @@ export default function TwoTakePicture() {
     hasNavigatedRef.current = false;
     previousPhotosRef.current = [];
     clearPollingInterval();
-    
-    if (activeRequestRef.current && typeof activeRequestRef.current.cancel === 'function') {
-      activeRequestRef.current.cancel('Component unmounted');
+
+    if (
+      activeRequestRef.current &&
+      typeof activeRequestRef.current.cancel === "function"
+    ) {
+      activeRequestRef.current.cancel("Component unmounted");
     }
     activeRequestRef.current = null;
   };
@@ -82,16 +98,20 @@ export default function TwoTakePicture() {
   useFocusEffect(
     React.useCallback(() => {
       resetAllState();
-      
-      AsyncStorage.removeItem('pending_photo_process')
-        .catch(err => console.error('Error removing pending photo process:', err));
-      
+
+      AsyncStorage.removeItem("pending_photo_process").catch((err) =>
+        console.error("Error removing pending photo process:", err)
+      );
+
       return () => {
         hasNavigatedRef.current = false;
         clearPollingInterval();
-        
-        if (activeRequestRef.current && typeof activeRequestRef.current.cancel === 'function') {
-          activeRequestRef.current.cancel('Component unmounted');
+
+        if (
+          activeRequestRef.current &&
+          typeof activeRequestRef.current.cancel === "function"
+        ) {
+          activeRequestRef.current.cancel("Component unmounted");
         }
       };
     }, [])
@@ -99,23 +119,27 @@ export default function TwoTakePicture() {
 
   const pollDataInformation = async (sessionId: string) => {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/data-information`,
-        { "session_id": sessionId }
-      );
-      
-      
+      const response = await axios.post(`${API_BASE_URL}/data-information`, {
+        session_id: sessionId,
+      });
+
       if (response.data.status === "success") {
         clearPollingInterval();
-        
+
         if (response?.data?.data[0]?.nutrition_info) {
-          await AsyncStorage.setItem('nutrition_info', JSON.stringify(response?.data?.data[0]?.nutrition_info));
+          await AsyncStorage.setItem(
+            "nutrition_info",
+            JSON.stringify(response?.data?.data[0]?.nutrition_info)
+          );
         }
 
         if (response?.data?.data[0]?.ingredients) {
-          await AsyncStorage.setItem('ingredients', JSON.stringify(response?.data?.data[0]?.ingredients));
+          await AsyncStorage.setItem(
+            "ingredients",
+            JSON.stringify(response?.data?.data[0]?.ingredients)
+          );
         }
-        
+
         if (isFocused) {
           setIsLoading(false);
           isProcessingRef.current = false;
@@ -123,96 +147,99 @@ export default function TwoTakePicture() {
         }
       }
     } catch (error) {
-      console.error('Error polling data:', error);
+      console.error("Error polling data:", error);
     }
   };
 
   useEffect(() => {
     if (loadingMessage && isFocused) {
-      AsyncStorage.getItem('sessionId')
-        .then(sessionId => {
+      AsyncStorage.getItem("sessionId")
+        .then((sessionId) => {
           if (sessionId) {
             pollDataInformation(sessionId);
-            
+
             pollingIntervalRef.current = setInterval(() => {
               if (sessionId) pollDataInformation(sessionId);
-            }, 5000); 
+            }, 5000);
           }
         })
-        .catch(err => console.error('Error getting session ID:', err));
+        .catch((err) => console.error("Error getting session ID:", err));
     }
-    
+
     requestPermission();
-    
-    AsyncStorage.getItem('pending_photo_process')
-      .then(pendingProcess => {
-        if (pendingProcess === 'true') {
-          AsyncStorage.removeItem('pending_photo_process')
-            .catch(err => console.error('Error removing pending process:', err));
+
+    AsyncStorage.getItem("pending_photo_process")
+      .then((pendingProcess) => {
+        if (pendingProcess === "true") {
+          AsyncStorage.removeItem("pending_photo_process").catch((err) =>
+            console.error("Error removing pending process:", err)
+          );
         }
       })
-      .catch(err => console.error('Error checking pending process:', err));
+      .catch((err) => console.error("Error checking pending process:", err));
   }, [loadingMessage]);
 
   const uploadImages = async (photos: string[]) => {
     try {
       if (!isFocused || isProcessingRef.current || hasNavigatedRef.current) {
-        console.log('Preventing duplicate processing');
+        console.log("Preventing duplicate processing");
         return;
       }
-      
+
       isProcessingRef.current = true;
       previousPhotosRef.current = [...photos];
-      
-      await AsyncStorage.setItem('pending_photo_process', 'true');
+
+      await AsyncStorage.setItem("pending_photo_process", "true");
       setIsLoading(true);
-      
+
       const formData = new FormData();
-      
+
       if (photos[0]) {
-        formData.append('ingredients', {
+        formData.append("composition", {
           uri: `data:image/jpeg;base64,${photos[0]}`,
-          name: 'composition.jpg',
-          type: 'image/jpeg',
-        } as any);
-      }
-  
-      if (photos[1]) {
-        formData.append('nutrition_info', {
-          uri: `data:image/jpeg;base64,${photos[1]}`,
-          name: 'nutrition_info.jpg',
-          type: 'image/jpeg',
+          name: "composition.jpg",
+          type: "image/jpeg",
         } as any);
       }
 
-      const sessionId = await AsyncStorage.getItem('sessionId');
-      if (sessionId) {
-        formData.append('sessionid', sessionId);
+      if (photos[1]) {
+        formData.append("nutrition_info", {
+          uri: `data:image/jpeg;base64,${photos[1]}`,
+          name: "nutrition_info.jpg",
+          type: "image/jpeg",
+        } as any);
       }
+
+      const sessionId = await AsyncStorage.getItem("sessionId");
+      if (sessionId) {
+        formData.append("sessionid", sessionId);
+      }
+
+      const endpoint = `${API_BASE_URL}/image/packaged-food`;
+      console.log("Uploading to:", endpoint);
 
       const CancelToken = axios.CancelToken;
       const source = CancelToken.source();
       activeRequestRef.current = source;
-  
+
       const response = await axios.post(
-        `${API_BASE_URL}/image/packaged-food`, 
-        formData, 
+        endpoint,
+        formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
-            'Accept': 'application/json',
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
           },
-          cancelToken: source.token
+          cancelToken: source.token,
         }
       );
-      
+
       if (!isFocused) return;
-      console.log('Upload response:', response.data);
-  
+
       if (response.data && response.data.status === 200) {
         hasNavigatedRef.current = true;
-        await AsyncStorage.removeItem('pending_photo_process');
-        
+        await AsyncStorage.removeItem("pending_photo_process");
+
         // Start polling for data information
         if (sessionId) {
           setLoadingMessage(true);
@@ -221,23 +248,40 @@ export default function TwoTakePicture() {
           setIsLoading(false);
           resetPhoto();
           isProcessingRef.current = false;
-          
+
           if (isFocused) {
             router.push("/type-ingredient");
           }
         }
       } else {
-        throw new Error("API returned non-200 status");
+        console.error("API returned non-200 status:", response.data);
+        throw new Error(`API error: ${response.data?.message || 'Unknown error'}`);
       }
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request canceled:', error.message);
+        console.log("Request canceled:", error.message);
       } else {
         console.error("Error processing images:", error);
-        Alert.alert("Error", "Failed to process images. Please try again.");
+
+        let errorMessage = "Failed to process images. Please try again.";
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            console.error("Response status:", error.response.status);
+            console.error("Response data:", error.response.data);
+            errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+          } else if (error.request) {
+            console.error("No response received:", error.request);
+            errorMessage = "No response from server. Check your connection.";
+          } else {
+            console.error("Request setup error:", error.message);
+            errorMessage = error.message;
+          }
+        }
+
+        Alert.alert("Error", errorMessage);
       }
-      
-      await AsyncStorage.removeItem('pending_photo_process');
+
+      await AsyncStorage.removeItem("pending_photo_process");
       resetPhoto();
       setIsLoading(false);
       isProcessingRef.current = false;
@@ -269,7 +313,7 @@ export default function TwoTakePicture() {
       const newPhotoBase64 = [...photoBase64, photo.base64];
       setPhotoBase64(newPhotoBase64);
       setLastPhotoUri(photo.uri);
-      
+
       const newPhotoCount = photoCount + 1;
       setPhotoCount(newPhotoCount);
 
@@ -279,7 +323,7 @@ export default function TwoTakePicture() {
           "You may choose to retake the picture or continue to the next step",
           [
             { text: "Continue" },
-            { text: "Retake", onPress: () => resetPhoto() }
+            { text: "Retake", onPress: () => resetPhoto() },
           ]
         );
       } else if (newPhotoCount === 2) {
@@ -289,12 +333,12 @@ export default function TwoTakePicture() {
           [
             {
               text: "Done",
-              onPress: () => uploadImages(newPhotoBase64)
+              onPress: () => uploadImages(newPhotoBase64),
             },
             {
               text: "Retake All",
-              onPress: () => resetPhoto()
-            }
+              onPress: () => resetPhoto(),
+            },
           ]
         );
       }
@@ -316,7 +360,7 @@ export default function TwoTakePicture() {
     return (
       <View className="flex-1 justify-center items-center">
         <Text>No access to camera</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           className="mt-4 bg-blue-500 px-4 py-2 rounded-lg"
           onPress={() => requestPermission()}
         >
@@ -325,14 +369,18 @@ export default function TwoTakePicture() {
       </View>
     );
   }
-  
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-black/75 justify-center items-center">
         <View className="bg-white p-6 rounded-xl items-center">
           <ActivityIndicator size="large" color="#4F46E5" />
-          <Text className="mt-4 text-lg font-medium">Processing your images...</Text>
-          <Text className="mt-2 text-gray-500">This may take a few seconds</Text>
+          <Text className="mt-4 text-lg font-medium">
+            Processing your images...
+          </Text>
+          <Text className="mt-2 text-gray-500">
+            This may take a few seconds
+          </Text>
         </View>
       </View>
     );
@@ -367,7 +415,7 @@ export default function TwoTakePicture() {
           style={StyleSheet.absoluteFill}
           facing="back"
         />
-        
+
         {/* Thumbnail Preview */}
         {lastPhotoUri ? (
           <View className="absolute top-4 right-4 rounded-md bg-gray-800">
@@ -389,7 +437,9 @@ export default function TwoTakePicture() {
         {/* Photo Type Indicator */}
         <View className="absolute top-40 self-center bg-green-500 px-4 py-2 rounded-full">
           <Text className="text-white font-bold">
-            {photoCount === 0 ? "Picture of Ingredients" : "Picture of Nutrition"}
+            {photoCount === 0
+              ? "Picture of Ingredients"
+              : "Picture of Nutrition"}
           </Text>
         </View>
 
@@ -399,9 +449,7 @@ export default function TwoTakePicture() {
             className="bg-blue-800 py-3 items-center mx-10 rounded-lg mb-3"
             onPress={takePicture}
           >
-            <Text className="text-white font-bold text-lg">
-              Take Picture
-            </Text>
+            <Text className="text-white font-bold text-lg">Take Picture</Text>
           </TouchableOpacity>
 
           {photoCount > 0 && (

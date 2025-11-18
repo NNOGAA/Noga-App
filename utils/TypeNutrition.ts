@@ -98,7 +98,6 @@ export const handleNutritionSubmission = async (
       return { success: false, error: "No session ID found" };
     }
 
-    // Format nutrition info for API
     const nutritionInfo = items
       .filter((item) => item.nilai && item.nilai !== "0")
       .map((item) => ({
@@ -108,17 +107,24 @@ export const handleNutritionSubmission = async (
         status: "neutral" as const,
       }));
 
-    // Parse ingredients
     let ingredients: any[] = [];
     if (ingredientsStr) {
       ingredients = JSON.parse(ingredientsStr);
     }
 
-    // Generate summary
-    const summary = await generateSummary(ingredients, nutritionInfo);
+    const summaryResponse = await generateSummary(ingredients, nutritionInfo);
 
-    if (summary) {
-      await AsyncStorage.setItem("nutrition_general", JSON.stringify(summary));
+    if (summaryResponse && summaryResponse.data) {
+      await AsyncStorage.setItem("nutrition_general", JSON.stringify(summaryResponse.data));
+
+      if (summaryResponse.data.ingredients) {
+        await AsyncStorage.setItem("ingredients", JSON.stringify(summaryResponse.data.ingredients));
+      }
+
+      if (summaryResponse.data.nutrition_info) {
+        await AsyncStorage.setItem("nutrition_info", JSON.stringify(summaryResponse.data.nutrition_info));
+      }
+
       return { success: true };
     }
 

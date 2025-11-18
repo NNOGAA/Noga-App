@@ -8,7 +8,7 @@ export interface Ingredient {
 
 export interface NutritionInfo {
   nama: string;
-  nilai: number;
+  nilai: number | string;
   type: string;
   status: 'good' | 'neutral' | 'bad';
   detail?: string;

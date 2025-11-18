@@ -14,11 +14,13 @@ import { useRouter } from "expo-router";
 import ProgressBar from "../components/ProgressBar";
 
 interface NutritionInfo {
-  nama: string;
-  nilai: string;
+  name?: string;
+  nama?: string;
+  value?: string | number;
+  nilai?: string | number;
   type: string;
   status: string;
-  data: null;
+  data?: null;
 }
 
 interface NutritionData {
@@ -33,7 +35,7 @@ interface NutritionData {
   >;
   nutrition_info: Array<NutritionInfo>;
   ingredients: Array<{
-    nama: string;
+    name: string;
     status: string;
     detail: string;
   }>;
@@ -61,25 +63,32 @@ export default function NutritionGeneral() {
         if (nutritionData) {
           const parsedData = JSON.parse(nutritionData) as NutritionData;
 
+          if (!parsedData.nutrition_info) {
+            setIsLoading(false);
+            return;
+          }
+
           const servingSizeInfo = parsedData.nutrition_info.find(
-            (item) =>
-              item.nama.toLowerCase().includes("serving") ||
-              item.nama.toLowerCase().includes("portion")
+            (item) => {
+              const itemName = (item.nama || item.name || '').toLowerCase();
+              return itemName.includes("serving") || itemName.includes("portion");
+            }
           );
           if (servingSizeInfo) {
-            setServingSize(
-              `${servingSizeInfo.nilai} ${servingSizeInfo.type || "g"}`
-            );
+            const value = servingSizeInfo.nilai || servingSizeInfo.value;
+            setServingSize(`${value} ${servingSizeInfo.type || "g"}`);
           }
 
           const caloriesInfo = parsedData.nutrition_info.find(
-            (item) =>
-              item.nama.toLowerCase().includes("energy") ||
-              item.nama.toLowerCase().includes("calor")
+            (item) => {
+              const itemName = (item.nama || item.name || '').toLowerCase();
+              return itemName.includes("energy") || itemName.includes("calor");
+            }
           );
           if (caloriesInfo) {
+            const value = caloriesInfo.nilai || caloriesInfo.value;
             setCalories(
-              `${caloriesInfo.nilai} ${
+              `${value} ${
                 caloriesInfo.type === "kilocalorie"
                   ? "cal"
                   : caloriesInfo.type || ""
@@ -87,33 +96,35 @@ export default function NutritionGeneral() {
             );
           }
 
-          const proteinInfo = parsedData.nutrition_info.find((item) =>
-            item.nama.toLowerCase().includes("protein")
-          );
-          const carbInfo = parsedData.nutrition_info.find((item) =>
-            item.nama.toLowerCase().includes("carbohydrate")
-          );
-          const satFatInfo = parsedData.nutrition_info.find(
-            (item) =>
-              item.nama.toLowerCase().includes("saturated fat") ||
-              item.nama.toLowerCase().includes("fat")
-          );
+          const proteinInfo = parsedData.nutrition_info.find((item) => {
+            const itemName = (item.nama || item.name || '').toLowerCase();
+            return itemName.includes("protein");
+          });
+
+          const carbInfo = parsedData.nutrition_info.find((item) => {
+            const itemName = (item.nama || item.name || '').toLowerCase();
+            return itemName.includes("carbohydrate");
+          });
+
+          const satFatInfo = parsedData.nutrition_info.find((item) => {
+            const itemName = (item.nama || item.name || '').toLowerCase();
+            return itemName.includes("saturated fat") || itemName.includes("saturated");
+          });
 
           const facts: NutritionFact[] = [
             {
               name: "protein",
-              value: proteinInfo ? parseInt(proteinInfo.nilai) : 0,
+              value: proteinInfo ? Number(proteinInfo.nilai || proteinInfo.value) : 0,
             },
             {
               name: "carbohydrate",
-              value: carbInfo ? parseInt(carbInfo.nilai) : 0,
+              value: carbInfo ? Number(carbInfo.nilai || carbInfo.value) : 0,
             },
             {
               name: "satruated_fat",
-              value: satFatInfo ? parseInt(satFatInfo.nilai) : 0,
+              value: satFatInfo ? Number(satFatInfo.nilai || satFatInfo.value) : 0,
             },
           ];
-
           setNutritionFacts(facts);
         }
       } catch (error) {
