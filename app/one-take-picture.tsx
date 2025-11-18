@@ -35,7 +35,7 @@ export default function TakePicture() {
   
   const isFocused = useIsFocused();
 
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef = useRef<CameraView | null>(null);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -285,6 +285,7 @@ export default function TakePicture() {
       </View>
 
       <View className="flex-1">
+        {/* @ts-ignore - ref is valid but not in type definitions */}
         <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back">
           <View className="flex-1 relative">
             <View className="absolute inset-0 flex items-center justify-center">

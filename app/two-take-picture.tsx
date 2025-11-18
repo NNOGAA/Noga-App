@@ -31,7 +31,7 @@ export default function TwoTakePicture() {
   const hasNavigatedRef = useRef(false);
   const previousPhotosRef = useRef<string[]>([]);
   const activeRequestRef = useRef<any>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cameraRef = useRef<CameraView>(null);
   
   const isFocused = useIsFocused();
@@ -361,9 +361,10 @@ export default function TwoTakePicture() {
 
       {/* Camera View */}
       <View className="flex-1 relative">
-        <CameraView 
-          ref={cameraRef} 
-          style={StyleSheet.absoluteFill} 
+        {/* @ts-ignore - ref is valid but not in type definitions */}
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
           facing="back"
         />
         
